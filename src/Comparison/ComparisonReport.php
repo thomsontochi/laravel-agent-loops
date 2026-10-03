@@ -18,12 +18,22 @@ final readonly class ComparisonReport
      * @param  string  $task  The task every loop ran
      * @param  array<string, LoopResult>  $results  Loop name => its result
      * @param  array<string, array{score: int, reason: string}>  $scores  Loop name => judge score (empty if not judged)
+     * @param  array<string, string>  $failures  Loop name => error message, for loops that failed to run
      */
     public function __construct(
         public string $task,
         public array $results,
         public array $scores = [],
+        public array $failures = [],
     ) {}
+
+    /**
+     * True when at least one loop failed to run.
+     */
+    public function hasFailures(): bool
+    {
+        return $this->failures !== [];
+    }
 
     /**
      * The loop that used the fewest tokens in total.

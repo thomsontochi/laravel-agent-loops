@@ -8,6 +8,7 @@ use Developia\AgentLoops\Attributes\UseLoop;
 use Developia\AgentLoops\Comparison\ComparisonReport;
 use Developia\AgentLoops\Comparison\Judge;
 use Developia\AgentLoops\Contracts\Loop;
+use Exception;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -87,16 +88,27 @@ final class LoopManager
         }
 
         $results = [];
+        $failures = [];
 
         foreach ($resolved as $name => $loop) {
             Log::debug('[agent-loops] compare: running loop', ['loop' => $name]);
 
-            $results[$name] = $loop->run($agent, $task);
+            try {
+                $results[$name] = $loop->run($agent, $task);
+            } catch (Exception $e) {
+                // A runtime problem (outage, rate limit, strict-mode stop): record it
+                // and keep going, so loops that already ran (and were paid for) are kept.
+                // Errors (real code bugs) are not caught and still crash loudly.
+                Log::warning('[agent-loops] compare: loop failed', ['loop' => $name, 'error' => $e->getMessage()]);
+
+                $failures[$name] = $e->getMessage();
+            }
         }
 
-        $scores = $judge ? $this->judge($task, $results) : [];
+        // Only judge when there's something to judge.
+        $scores = $judge && $results !== [] ? $this->judge($task, $results) : [];
 
-        return new ComparisonReport($task, $results, $scores);
+        return new ComparisonReport($task, $results, $scores, $failures);
     }
 
     /**
