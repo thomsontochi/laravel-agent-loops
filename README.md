@@ -1,5 +1,7 @@
 # Laravel Agent Loops
 
+[![tests](https://github.com/thomsontochi/laravel-agent-loops/actions/workflows/tests.yml/badge.svg)](https://github.com/thomsontochi/laravel-agent-loops/actions/workflows/tests.yml)
+
 Give your agent a mindset.
 
 An AI agent works in a cycle: think, use a tool, check, repeat. That cycle is the loop.
