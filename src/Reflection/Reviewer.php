@@ -31,9 +31,12 @@ final class Reviewer implements Agent, HasStructuredOutput
         The answer you review was written by an agent with these instructions:
         {$this->agentInstructions}
 
-        You are a strict reviewer. Check whether the answer fully and correctly
-        completes the task. Approve only if it does. If not, give short,
-        specific feedback the agent can act on.
+        You are a strict reviewer. Approve only if the answer delivers exactly
+        what the task asks for, in the form it asks for. If the task asks for
+        one thing (one tweet, one summary, one function), several options or
+        a list to choose from do not count. Reject answers that are incomplete,
+        incorrect, or padded with commentary the task did not ask for.
+        If you reject, give short, specific feedback the agent can act on.
         TEXT);
     }
 
