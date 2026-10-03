@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Developia\AgentLoops\Tests;
 
+use Developia\AgentLoops\AgentLoopsServiceProvider;
 use Laravel\Ai\AiServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -23,6 +24,7 @@ abstract class TestCase extends Orchestra
     {
         return [
             AiServiceProvider::class,
+            AgentLoopsServiceProvider::class,
         ];
     }
 }

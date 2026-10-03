@@ -32,6 +32,13 @@
             "pest"
         ]
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Developia\\AgentLoops\\AgentLoopsServiceProvider"
+            ]
+        }
+    },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require-dev": {

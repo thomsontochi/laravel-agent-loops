@@ -27,4 +27,18 @@ final readonly class LoopResult
         public int $outputTokens,
         public float $durationMs,
     ) {}
+
+    /**
+     * True when the loop could not run its own style and fell back to ReAct.
+     */
+    public function fellBack(): bool
+    {
+        foreach ($this->steps as $step) {
+            if ($step['type'] === 'fallback') {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
