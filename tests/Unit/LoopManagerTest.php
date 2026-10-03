@@ -47,3 +47,16 @@ it('lets using() beat the UseLoop attribute', function () {
 
     expect($result->loop)->toBe('react');
 });
+
+it('ships every setting in the config file', function () {
+    // Read the file itself, not config(), so code fallbacks can't hide a missing section.
+    $config = require __DIR__.'/../../config/agent-loops.php';
+
+    expect($config)->toHaveKeys([
+        'default',
+        'loops',
+        'plan_execute.max_steps',
+        'plan_execute.on_planning_failure',
+        'reflect_retry.max_retries',
+    ]);
+});
