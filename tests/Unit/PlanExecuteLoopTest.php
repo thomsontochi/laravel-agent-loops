@@ -6,6 +6,7 @@ use Developia\AgentLoops\Loops\PlanExecuteLoop;
 use Developia\AgentLoops\Planning\Planner;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
 use Illuminate\Support\Facades\Event;
+use Laravel\Ai\Exceptions\ProviderOverloadedException;
 
 it('has the name plan-execute', function () {
     expect((new PlanExecuteLoop)->name())->toBe('plan-execute');
@@ -67,3 +68,16 @@ it('throws instead when on_planning_failure is throw', function () {
 
     (new PlanExecuteLoop)->run(new TestAgent, 'Write a launch tweet');
 })->throws(PlanningFailedException::class, 'empty plan');
+
+it('does not treat a provider outage as a planning failure', function () {
+    Event::fake([PlanningFailed::class]);
+    Planner::fake(fn () => throw ProviderOverloadedException::forProvider('gemini'));
+    TestAgent::fake();
+
+    expect(fn () => (new PlanExecuteLoop)->run(new TestAgent, 'Write a launch tweet'))
+        ->toThrow(ProviderOverloadedException::class);
+
+    // No fallback to react, and no misleading "planning failed" alert.
+    TestAgent::assertNeverPrompted();
+    Event::assertNotDispatched(PlanningFailed::class);
+});

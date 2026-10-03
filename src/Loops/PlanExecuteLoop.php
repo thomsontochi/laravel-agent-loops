@@ -11,6 +11,7 @@ use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Planning\Planner;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Exceptions\FailoverableException;
 use Laravel\Ai\Responses\AgentResponse;
 use Throwable;
 
@@ -45,6 +46,10 @@ final class PlanExecuteLoop implements Loop
         // 1. Plan
         try {
             $plan = $this->plan($agent, $task);
+        } catch (FailoverableException $e) {
+            // The provider is overloaded, rate limited or unreachable. That's an
+            // outage, not a bad plan: falling back would hit the same provider.
+            throw $e;
         } catch (Throwable $e) {
             return $this->handlePlanningFailure($agent, $task, $e->getMessage(), $startedAt, $e);
         }
