@@ -62,6 +62,7 @@ final class CompareCommand extends Command
                 'task' => $report->task,
                 'results' => $report->results,
                 'failures' => (object) $report->failures,
+                'judgeFailure' => $report->judgeFailure,
                 'scores' => (object) $report->scores,
                 'summary' => [
                     'cheapest' => $report->cheapest(),
@@ -81,6 +82,10 @@ final class CompareCommand extends Command
 
         foreach ($report->failures as $name => $message) {
             $this->components->warn("{$name}: {$message}");
+        }
+
+        if ($report->judgeFailure !== null) {
+            $this->components->warn("judge: {$report->judgeFailure}");
         }
 
         if ($report->results !== []) {

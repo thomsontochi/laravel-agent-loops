@@ -19,20 +19,22 @@ final readonly class ComparisonReport
      * @param  array<string, LoopResult>  $results  Loop name => its result
      * @param  array<string, array{score: int, reason: string}>  $scores  Loop name => judge score (empty if not judged)
      * @param  array<string, string>  $failures  Loop name => error message, for loops that failed to run
+     * @param  string|null  $judgeFailure  Why judging failed, when --judge was asked for (null = judged or not asked)
      */
     public function __construct(
         public string $task,
         public array $results,
         public array $scores = [],
         public array $failures = [],
+        public ?string $judgeFailure = null,
     ) {}
 
     /**
-     * True when at least one loop failed to run.
+     * True when at least one loop failed to run, or judging failed.
      */
     public function hasFailures(): bool
     {
-        return $this->failures !== [];
+        return $this->failures !== [] || $this->judgeFailure !== null;
     }
 
     /**

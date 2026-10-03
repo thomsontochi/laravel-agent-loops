@@ -2,6 +2,7 @@
 
 use Developia\AgentLoops\Agents\GeneralAssistant;
 use Developia\AgentLoops\Comparison\ComparisonReport;
+use Developia\AgentLoops\Comparison\Judge;
 use Developia\AgentLoops\Facades\AgentLoops;
 use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Planning\Planner;
@@ -32,6 +33,21 @@ it('ignores failed loops when picking cheapest and fastest', function () {
 
     expect($report->cheapest())->toBe('react')
         ->and($report->fastest())->toBe('react');
+});
+
+it('keeps the results when the judge call fails', function () {
+    TestAgent::fake(['react answer']);
+    Judge::fake(fn () => throw ProviderOverloadedException::forProvider('gemini'));
+
+    $report = AgentLoops::compare(new TestAgent, 'x', ['react'], judge: true);
+
+    // The paid-for result survives; the judge failure is its own field,
+    // not a fake entry in the loop-name => message map.
+    expect($report->results['react']->output)->toBe('react answer')
+        ->and($report->scores)->toBe([])
+        ->and($report->failures)->toBe([])
+        ->and($report->judgeFailure)->toBe('AI provider [gemini] is overloaded.')
+        ->and($report->hasFailures())->toBeTrue();
 });
 
 it('lets real code bugs crash instead of recording them', function () {

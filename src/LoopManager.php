@@ -105,10 +105,22 @@ final class LoopManager
             }
         }
 
-        // Only judge when there's something to judge.
-        $scores = $judge && $results !== [] ? $this->judge($task, $results) : [];
+        // Only judge when there's something to judge. A judge outage must not
+        // throw away results we already paid for: record it, keep scores empty.
+        $scores = [];
+        $judgeFailure = null;
 
-        return new ComparisonReport($task, $results, $scores, $failures);
+        if ($judge && $results !== []) {
+            try {
+                $scores = $this->judge($task, $results);
+            } catch (Exception $e) {
+                Log::warning('[agent-loops] compare: judge failed', ['error' => $e->getMessage()]);
+
+                $judgeFailure = $e->getMessage();
+            }
+        }
+
+        return new ComparisonReport($task, $results, $scores, $failures, $judgeFailure);
     }
 
     /**
