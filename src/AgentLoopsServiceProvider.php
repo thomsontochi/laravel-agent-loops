@@ -17,6 +17,8 @@ final class AgentLoopsServiceProvider extends ServiceProvider
     {
         // Our defaults, which an app's own config/agent-loops.php overrides.
         $this->mergeConfigFrom(__DIR__.'/../config/agent-loops.php', 'agent-loops');
+        // One shared LoopManager per app, used by the AgentLoops facade.
+        $this->app->singleton(LoopManager::class);
     }
 
     public function boot(): void

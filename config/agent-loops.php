@@ -1,29 +1,36 @@
 <?php
 
-return [
+use Developia\AgentLoops\Loops\PlanExecuteLoop;
+use Developia\AgentLoops\Loops\ReActLoop;
+use Developia\AgentLoops\Loops\ReflectRetryLoop;
 
+return [
     /*
     |--------------------------------------------------------------------------
-    | Plan then execute
+    | Default loop
     |--------------------------------------------------------------------------
     |
-    | max_steps: the most steps a plan may have. Longer plans are trimmed,
-    | which stops a runaway plan from burning tokens.
-    |
-    | on_planning_failure: what to do when the agent can't produce a plan.
-    |   "fallback" (default): run the task with ReAct, still return an answer,
-    |                         and report it (warning log, event, result flag).
-    |   "throw":              throw a PlanningFailedException instead.
+    | The loop AgentLoops::run() uses when nothing more specific is chosen.
+    | Order of priority: AgentLoops::using('name') at the call site, then a
+    | #[UseLoop('name')] attribute on the agent, then this default.
     |
     */
 
-    'plan_execute' => [
-        'max_steps' => (int) env('AGENT_LOOPS_MAX_STEPS', 5),
-        'on_planning_failure' => env('AGENT_LOOPS_ON_PLANNING_FAILURE', 'fallback'),
-    ],
+    'default' => env('AGENT_LOOPS_DEFAULT', 'react'),
 
-    'reflect_retry' => [
-        'max_retries' => (int) env('AGENT_LOOPS_MAX_RETRIES', 2),
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | Available loops
+    |--------------------------------------------------------------------------
+    |
+    | Name => class. Add your own class implementing
+    | Developia\AgentLoops\Contracts\Loop to use a custom loop by name.
+    |
+    */
 
+    'loops' => [
+        'react' => ReActLoop::class,
+        'plan-execute' => PlanExecuteLoop::class,
+        'reflect-retry' => ReflectRetryLoop::class,
+    ],
 ];
