@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Developia\AgentLoops;
 
 use Developia\AgentLoops\Attributes\UseLoop;
+use Developia\AgentLoops\Comparison\ComparisonReport;
+use Developia\AgentLoops\Comparison\Judge;
 use Developia\AgentLoops\Contracts\Loop;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Laravel\Ai\Contracts\Agent;
 use ReflectionClass;
@@ -62,5 +65,61 @@ final class LoopManager
         }
 
         return (string) config('agent-loops.default', 'react');
+    }
+
+    /**
+     * Run the same task through several loops and report how each did.
+     *
+     * @param  list<string>  $loops  Loop names, e.g. ['react', 'reflect-retry']
+     * @param  bool  $judge  Also ask a Judge agent to score each answer (extra AI call)
+     */
+    public function compare(Agent $agent, string $task, array $loops, bool $judge = false): ComparisonReport
+    {
+        if ($loops === []) {
+            throw new InvalidArgumentException('Give at least one loop to compare.');
+        }
+
+        $results = [];
+
+        foreach (array_unique($loops) as $name) {
+            Log::debug('[agent-loops] compare: running loop', ['loop' => $name]);
+
+            $results[$name] = $this->using($name)->run($agent, $task);
+        }
+
+        $scores = $judge ? $this->judge($task, $results) : [];
+
+        return new ComparisonReport($task, $results, $scores);
+    }
+
+    /**
+     * Ask the Judge to score each answer.
+     *
+     * @param  array<string, LoopResult>  $results
+     * @return array<string, array{score: int, reason: string}>
+     */
+    private function judge(string $task, array $results): array
+    {
+        $answers = collect($results)
+            ->map(fn (LoopResult $result, string $name): string => "[{$name}]\n{$result->output}")
+            ->implode("\n\n");
+
+        $response = (new Judge)->prompt("Task: {$task}\n\nAnswers:\n\n{$answers}");
+
+        $scores = [];
+
+        foreach ((array) ($response['scores'] ?? []) as $row) {
+            $loop = (string) ($row['loop'] ?? '');
+
+            // Ignore scores for loops we didn't run (the judge can mislabel).
+            if (isset($results[$loop])) {
+                $scores[$loop] = [
+                    'score' => (int) ($row['score'] ?? 0),
+                    'reason' => (string) ($row['reason'] ?? ''),
+                ];
+            }
+        }
+
+        return $scores;
     }
 }

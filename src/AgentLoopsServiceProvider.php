@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Developia\AgentLoops;
 
+use Developia\AgentLoops\Console\CompareCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -27,5 +28,12 @@ final class AgentLoopsServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../config/agent-loops.php' => config_path('agent-loops.php'),
         ], 'agent-loops-config');
+
+        // Artisan commands only exist in the terminal, not in web requests.
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CompareCommand::class,
+            ]);
+        }
     }
 }
