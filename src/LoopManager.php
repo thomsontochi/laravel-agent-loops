@@ -79,12 +79,19 @@ final class LoopManager
             throw new InvalidArgumentException('Give at least one loop to compare.');
         }
 
-        $results = [];
+        // Resolve every loop first, so a typo fails before any AI call is made.
+        $resolved = [];
 
         foreach (array_unique($loops) as $name) {
+            $resolved[$name] = $this->using($name);
+        }
+
+        $results = [];
+
+        foreach ($resolved as $name => $loop) {
             Log::debug('[agent-loops] compare: running loop', ['loop' => $name]);
 
-            $results[$name] = $this->using($name)->run($agent, $task);
+            $results[$name] = $loop->run($agent, $task);
         }
 
         $scores = $judge ? $this->judge($task, $results) : [];

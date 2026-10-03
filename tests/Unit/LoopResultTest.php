@@ -34,3 +34,11 @@ it('knows when a run was not approved', function () {
     expect($approved->approved())->toBeTrue()
         ->and($rejected->approved())->toBeFalse();
 });
+
+it('knows when a run fell back', function () {
+    $normal = new LoopResult('react', 'ok', [['type' => 'answer', 'content' => 'ok']], 0, 0, 0.0);
+    $fallback = new LoopResult('plan-execute', 'ok', [['type' => 'fallback', 'content' => 'empty plan']], 0, 0, 0.0);
+
+    expect($normal->fellBack())->toBeFalse()
+        ->and($fallback->fellBack())->toBeTrue();
+});

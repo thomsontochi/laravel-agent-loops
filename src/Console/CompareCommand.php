@@ -9,6 +9,7 @@ use Developia\AgentLoops\LoopManager;
 use Developia\AgentLoops\LoopResult;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Laravel\Ai\Contracts\Agent;
 
 /**
@@ -20,7 +21,8 @@ final class CompareCommand extends Command
         {task : The task every loop will run}
         {--loops=react,plan-execute,reflect-retry : Comma-separated loop names}
         {--agent= : Agent class to use (default: a built-in assistant)}
-        {--judge : Also score each answer 1-10 with a Judge agent}';
+        {--judge : Also score each answer 1-10 with a Judge agent}
+        {--json : Output the report as JSON instead of tables}';
 
     protected $description = 'Run one task through several loops and compare cost, speed and output';
 
@@ -34,9 +36,36 @@ final class CompareCommand extends Command
 
         $names = array_values(array_filter(array_map('trim', explode(',', (string) $this->option('loops')))));
 
-        $this->components->info('Running '.count($names).' loops with '.class_basename($agent).'. This makes real AI calls.');
+        $json = (bool) $this->option('json');
 
-        $report = $loops->compare($agent, (string) $this->argument('task'), $names, (bool) $this->option('judge'));
+        if (! $json) {
+            $this->components->info('Running '.count($names).' loops with '.class_basename($agent).'. This makes real AI calls.');
+        }
+
+        try {
+            $report = $loops->compare($agent, (string) $this->argument('task'), $names, (bool) $this->option('judge'));
+        } catch (InvalidArgumentException $e) {
+            // Unknown loop name etc.: report it like the --agent error, not a stack trace.
+            $this->components->error($e->getMessage());
+
+            return self::FAILURE;
+        }
+
+        // Machine-readable output: JSON on stdout, nothing else.
+        if ($json) {
+            $this->line(json_encode([
+                'task' => $report->task,
+                'results' => $report->results,
+                'scores' => (object) $report->scores,
+                'summary' => [
+                    'cheapest' => $report->cheapest(),
+                    'fastest' => $report->fastest(),
+                    'best' => $report->best(),
+                ],
+            ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+            return self::SUCCESS;
+        }
 
         // 1. Cost and speed
         $this->table(

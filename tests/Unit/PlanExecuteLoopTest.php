@@ -2,7 +2,6 @@
 
 use Developia\AgentLoops\Events\PlanningFailed;
 use Developia\AgentLoops\Exceptions\PlanningFailedException;
-use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Loops\PlanExecuteLoop;
 use Developia\AgentLoops\Planning\Planner;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
@@ -68,11 +67,3 @@ it('throws instead when on_planning_failure is throw', function () {
 
     (new PlanExecuteLoop)->run(new TestAgent, 'Write a launch tweet');
 })->throws(PlanningFailedException::class, 'empty plan');
-
-it('knows when a run fell back', function () {
-    $normal = new LoopResult('react', 'ok', [['type' => 'answer', 'content' => 'ok']], 0, 0, 0.0);
-    $fallback = new LoopResult('plan-execute', 'ok', [['type' => 'fallback', 'content' => 'empty plan']], 0, 0, 0.0);
-
-    expect($normal->fellBack())->toBeFalse()
-        ->and($fallback->fellBack())->toBeTrue();
-});
