@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Developia\AgentLoops;
 
 use Developia\AgentLoops\Console\CompareCommand;
+use Developia\AgentLoops\Console\InstallCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -33,6 +34,7 @@ final class AgentLoopsServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 CompareCommand::class,
+                InstallCommand::class,
             ]);
         }
     }
