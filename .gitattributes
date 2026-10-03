@@ -1,0 +1,12 @@
+# Normalise line endings across macOS, Linux and Windows
+* text=auto eol=lf
+
+# Leave these out of the package that users download
+/.github            export-ignore
+/art                export-ignore
+/tests              export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/CONTRIBUTING.md    export-ignore
+/demo.tape          export-ignore
+/phpunit.xml        export-ignore
