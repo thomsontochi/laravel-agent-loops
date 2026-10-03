@@ -25,6 +25,13 @@
             "Developia\\AgentLoops\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "format": "pint",
+        "test": [
+            "pint --test",
+            "pest"
+        ]
+    },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require-dev": {
