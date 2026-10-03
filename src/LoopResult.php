@@ -41,4 +41,19 @@ final readonly class LoopResult
 
         return false;
     }
+
+    /**
+     * False when a reviewing loop gave up without approving the output.
+     * Loops that don't review (react, plan-execute) are always true.
+     */
+    public function approved(): bool
+    {
+        foreach ($this->steps as $step) {
+            if ($step['type'] === 'not_approved') {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

@@ -26,3 +26,11 @@ it('cannot be changed after it is created', function () {
     // readonly: changing a value must throw an Error
     $result->output = 'London';
 })->throws(Error::class);
+
+it('knows when a run was not approved', function () {
+    $approved = new LoopResult('reflect-retry', 'ok', [['type' => 'review_approved', 'content' => 'Good.']], 0, 0, 0.0);
+    $rejected = new LoopResult('reflect-retry', 'ok', [['type' => 'not_approved', 'content' => 'Not approved']], 0, 0, 0.0);
+
+    expect($approved->approved())->toBeTrue()
+        ->and($rejected->approved())->toBeFalse();
+});

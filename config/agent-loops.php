@@ -22,4 +22,8 @@ return [
         'on_planning_failure' => env('AGENT_LOOPS_ON_PLANNING_FAILURE', 'fallback'),
     ],
 
+    'reflect_retry' => [
+        'max_retries' => (int) env('AGENT_LOOPS_MAX_RETRIES', 2),
+    ],
+
 ];
