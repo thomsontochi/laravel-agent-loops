@@ -10,6 +10,7 @@ use Developia\AgentLoops\Exceptions\PlanningFailedException;
 use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Planning\Planner;
+use Developia\AgentLoops\Pricing;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Exceptions\FailoverableException;
@@ -31,6 +32,9 @@ final class PlanExecuteLoop implements Loop
 
     private int $outputTokens = 0;
 
+    /** Running cost in dollars; null once any call has no price. */
+    private ?float $cost = 0.0;
+
     public function name(): string
     {
         return 'plan-execute';
@@ -40,6 +44,7 @@ final class PlanExecuteLoop implements Loop
     {
         $this->inputTokens = 0;
         $this->outputTokens = 0;
+        $this->cost = 0.0;
         $startedAt = hrtime(true);
 
         Log::debug('[agent-loops] plan-execute: start', ['agent' => $agent::class]);
@@ -90,6 +95,7 @@ final class PlanExecuteLoop implements Loop
             inputTokens: $this->inputTokens,
             outputTokens: $this->outputTokens,
             durationMs: $this->elapsedMs($startedAt),
+            cost: $this->cost,
         );
     }
 
@@ -153,6 +159,8 @@ final class PlanExecuteLoop implements Loop
             inputTokens: $this->inputTokens + $fallback->inputTokens,
             outputTokens: $this->outputTokens + $fallback->outputTokens,
             durationMs: $this->elapsedMs($startedAt),
+            // Planner call (if it answered) plus the ReAct fallback run.
+            cost: Pricing::add($this->cost, $fallback->cost),
         );
     }
 
@@ -199,6 +207,13 @@ final class PlanExecuteLoop implements Loop
     {
         $this->inputTokens += $response->usage->inputTokens;
         $this->outputTokens += $response->usage->outputTokens;
+
+        // Price each call at the model that answered it (planner and agent may differ).
+        $this->cost = Pricing::add($this->cost, Pricing::estimate(
+            $response->meta->model,
+            $response->usage->inputTokens,
+            $response->usage->outputTokens,
+        ));
     }
 
     private function elapsedMs(int $startedAt): float

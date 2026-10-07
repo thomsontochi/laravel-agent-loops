@@ -7,6 +7,9 @@ use Developia\AgentLoops\Reflection\Reviewer;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
+use Laravel\Ai\Responses\TextResponse;
 
 it('runs the task through every loop given', function () {
     TestAgent::fake(['react answer', 'reflect answer']);
@@ -108,4 +111,24 @@ it('gives the judge the agent rules so it can check them', function () {
     Judge::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('You are a helpful test agent.')
         && $prompt->contains('Write a tweet')
         && $prompt->contains('react answer'));
+});
+
+it('shows the estimated cost of each loop in the table and json', function () {
+    config()->set('agent-loops.pricing', ['test-model' => ['input' => 0.25, 'output' => 1.50]]);
+
+    // 1,000 in × $0.25 + 2,000 out × $1.50 (per 1M) = $0.00325
+    $reply = fn () => new TextResponse('Launch day!', new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model'));
+
+    GeneralAssistant::fake([$reply()]);
+    Artisan::call('agent-loops:compare', ['task' => 'Write a tweet', '--loops' => 'react']);
+    $table = Artisan::output();
+
+    expect($table)->toContain('Cost (est.)')
+        ->and($table)->toContain('$0.003250');
+
+    GeneralAssistant::fake([$reply()]);
+    Artisan::call('agent-loops:compare', ['task' => 'Write a tweet', '--loops' => 'react', '--json' => true]);
+    $report = json_decode(Artisan::output(), associative: true);
+
+    expect($report['results']['react']['cost'])->toBe(0.00325);
 });

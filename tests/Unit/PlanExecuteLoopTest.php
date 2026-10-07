@@ -8,6 +8,10 @@ use Developia\AgentLoops\Planning\Planner;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
 use Illuminate\Support\Facades\Event;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
+use Laravel\Ai\Responses\StructuredTextResponse;
+use Laravel\Ai\Responses\TextResponse;
 
 it('has the name plan-execute', function () {
     expect((new PlanExecuteLoop)->name())->toBe('plan-execute');
@@ -97,4 +101,40 @@ it('grounds every step and the final answer in the given facts', function () {
 it('tells the planner to plan only from the information given', function () {
     expect((new Planner('Be helpful.'))->instructions())
         ->toContain('Plan only from the information given');
+});
+
+it('adds up the cost of every call, each at its own model price', function () {
+    config()->set('agent-loops.pricing', [
+        'planner-model' => ['input' => 1.00, 'output' => 2.00],
+        'test-model' => ['input' => 0.25, 'output' => 1.50],
+    ]);
+
+    // Planner: 1,000 in × $1 + 500 out × $2 (per 1M) = $0.002
+    Planner::fake([new StructuredTextResponse(
+        ['steps' => ['Step A', 'Step B']], '', new TextUsage(inputTokens: 1000, outputTokens: 500), new Meta(model: 'planner-model'),
+    )]);
+
+    // 2 steps + 1 answer, each 1,000 in × $0.25 + 2,000 out × $1.50 = $0.00325 → $0.00975
+    $answer = fn (string $text) => new TextResponse($text, new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model'));
+    TestAgent::fake([$answer('A done'), $answer('B done'), $answer('final')]);
+
+    $result = (new PlanExecuteLoop)->run(new TestAgent, 'Do the thing');
+
+    expect($result->cost)->toBe(0.01175);
+});
+
+it('has no cost when any call used a model with no price', function () {
+    config()->set('agent-loops.pricing', ['test-model' => ['input' => 0.25, 'output' => 1.50]]);
+
+    // The planner's model has no price, so the total can't be trusted.
+    Planner::fake([new StructuredTextResponse(
+        ['steps' => ['Step A']], '', new TextUsage(inputTokens: 1000, outputTokens: 500), new Meta(model: 'unknown-model'),
+    )]);
+
+    $answer = fn (string $text) => new TextResponse($text, new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model'));
+    TestAgent::fake([$answer('A done'), $answer('final')]);
+
+    $result = (new PlanExecuteLoop)->run(new TestAgent, 'Do the thing');
+
+    expect($result->cost)->toBeNull();
 });

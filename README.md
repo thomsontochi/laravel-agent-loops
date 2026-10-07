@@ -241,7 +241,8 @@ The JSON output looks like this:
       "steps": [{ "type": "answer", "content": "..." }],
       "inputTokens": 28,
       "outputTokens": 301,
-      "durationMs": 2300.4
+      "durationMs": 2300.4,
+      "cost": 0.000459
     }
   },
   "failures": { "plan-execute": "AI provider [gemini] is overloaded." },
@@ -263,6 +264,26 @@ jq -r '.summary.cheapest' results.json
 jq -r '.results | to_entries[] | "\(.key): \(.value.inputTokens + .value.outputTokens) tokens"' results.json
 ```
 
+## Estimated cost
+
+`agent-loops:compare` shows a **Cost (est.)** column, and every `LoopResult` has a `cost` in dollars:
+
+```
+| Loop         | Steps | Tokens in | Tokens out | Time | Cost (est.) | Status |
+| react        | 1     | 312       | 254        | 1.9s | $0.000459   | ok     |
+| plan-execute | 5     | 4,870     | 1,940      | 9.4s | $0.004128   | ok     |
+```
+
+How it works:
+
+- Each AI response says which model answered. That call is priced at that model's rate and added to the run's total, so a planner or reviewer on a different model from your agent is still priced correctly.
+- Prices live in `pricing` in `config/agent-loops.php`, in dollars per 1M tokens, for current Gemini, OpenAI and Anthropic models (checked 7 Oct 2026, links in the file).
+- A model with no price shows `-`. If any call in a run has no price, the whole run shows `-` rather than a total that leaves a call out.
+- Add a model or change a price by listing just that model under `pricing` in your config. Your entries are merged on top of the built-in list, model by model, so you don't lose the others.
+- The judge's call is not included.
+
+It's an **estimate**: cached-token discounts, batch pricing, free tiers and higher rates for very long prompts are not counted. Check your provider's dashboard for the real bill.
+
 ## Configuration
 
 ```bash
@@ -276,6 +297,7 @@ php artisan vendor:publish --tag=agent-loops-config
 | `plan_execute.max_steps` | `AGENT_LOOPS_MAX_STEPS` | `5` | Longest plan allowed. Longer plans are trimmed |
 | `plan_execute.on_planning_failure` | `AGENT_LOOPS_ON_PLANNING_FAILURE` | `fallback` | `fallback` to react, or `throw` |
 | `reflect_retry.max_retries` | `AGENT_LOOPS_MAX_RETRIES` | `2` | Redos after a rejected review. 2 means up to 3 attempts |
+| `pricing` | | current Gemini, OpenAI and Anthropic models | Dollars per 1M tokens per model ID, for the Cost (est.) column. Your entries are added on top |
 
 The planner, reviewer and judge agents use your app's default AI provider from `config/ai.php`.
 

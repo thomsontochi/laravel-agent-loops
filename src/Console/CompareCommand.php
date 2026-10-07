@@ -77,7 +77,7 @@ final class CompareCommand extends Command
 
         // 1. Cost and speed, in the order the loops were asked for
         $this->table(
-            ['Loop', 'Steps', 'Tokens in', 'Tokens out', 'Time', 'Status'],
+            ['Loop', 'Steps', 'Tokens in', 'Tokens out', 'Time', 'Cost (est.)', 'Status'],
             array_map(fn (string $name): array => $this->row($report, $name), $names),
         );
 
@@ -137,7 +137,7 @@ final class CompareCommand extends Command
         $result = $report->results[$name] ?? null;
 
         if ($result === null) {
-            return [$name, '-', '-', '-', '-', 'failed'];
+            return [$name, '-', '-', '-', '-', '-', 'failed'];
         }
 
         return [
@@ -146,6 +146,8 @@ final class CompareCommand extends Command
             number_format($result->inputTokens),
             number_format($result->outputTokens),
             number_format($result->durationMs / 1000, 1).'s',
+            // 6 decimals: one run often costs a fraction of a cent. "-" = no price for the model.
+            $result->cost === null ? '-' : '$'.number_format($result->cost, 6),
             $this->status($result),
         ];
     }

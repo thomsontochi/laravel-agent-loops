@@ -42,3 +42,25 @@ it('records token usage from the agent', function () {
         ->and($result->outputTokens)->toBe(8)
         ->and($result->durationMs)->toBeGreaterThanOrEqual(0.0);
 });
+
+it('records the estimated cost using the model that answered', function () {
+    config()->set('agent-loops.pricing', ['test-model' => ['input' => 0.25, 'output' => 1.50]]);
+
+    TestAgent::fake([
+        new TextResponse('Paris', new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model')),
+    ]);
+
+    $result = (new ReActLoop)->run(new TestAgent, 'Capital of France?');
+
+    expect($result->cost)->toBe(0.00325);
+});
+
+it('has no cost when the model has no price', function () {
+    TestAgent::fake([
+        new TextResponse('Paris', new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'unknown-model')),
+    ]);
+
+    $result = (new ReActLoop)->run(new TestAgent, 'Capital of France?');
+
+    expect($result->cost)->toBeNull();
+});

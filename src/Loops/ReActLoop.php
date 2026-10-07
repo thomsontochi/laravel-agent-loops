@@ -7,6 +7,7 @@ namespace Developia\AgentLoops\Loops;
 use Developia\AgentLoops\Contracts\Loop;
 use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
+use Developia\AgentLoops\Pricing;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Responses\Data\ToolCall;
@@ -45,6 +46,7 @@ final class ReActLoop implements Loop
         Log::debug('[agent-loops] react: done', [
             'tool_calls' => $response->toolCalls->count(),
             'duration_ms' => $durationMs,
+            'model' => $response->meta->model,
         ]);
 
         return new LoopResult(
@@ -54,6 +56,12 @@ final class ReActLoop implements Loop
             inputTokens: $response->usage->inputTokens,
             outputTokens: $response->usage->outputTokens,
             durationMs: $durationMs,
+            // Priced by the model the provider says answered, not a guess.
+            cost: Pricing::estimate(
+                $response->meta->model,
+                $response->usage->inputTokens,
+                $response->usage->outputTokens,
+            ),
         );
     }
 }

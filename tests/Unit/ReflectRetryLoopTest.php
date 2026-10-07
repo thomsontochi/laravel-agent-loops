@@ -4,6 +4,10 @@ use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\Loops\ReflectRetryLoop;
 use Developia\AgentLoops\Reflection\Reviewer;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
+use Laravel\Ai\Responses\StructuredTextResponse;
+use Laravel\Ai\Responses\TextResponse;
 
 it('has the name reflect-retry', function () {
     expect((new ReflectRetryLoop)->name())->toBe('reflect-retry');
@@ -75,4 +79,39 @@ it('grounds the first attempt and every retry in the given facts', function () {
 it('tells the reviewer to reject invented facts', function () {
     expect((new Reviewer('Be helpful.'))->instructions())
         ->toContain('Reject if the answer breaks any of these instructions');
+});
+
+it('adds up the cost of every attempt and review, each at its own model price', function () {
+    config()->set('agent-loops.pricing', [
+        'reviewer-model' => ['input' => 1.00, 'output' => 2.00],
+        'test-model' => ['input' => 0.25, 'output' => 1.50],
+    ]);
+
+    // 2 attempts, each 1,000 in × $0.25 + 2,000 out × $1.50 (per 1M) = $0.00325 → $0.0065
+    $attempt = fn (string $text) => new TextResponse($text, new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model'));
+    TestAgent::fake([$attempt('Draft 1'), $attempt('Draft 2')]);
+
+    // 2 reviews, each 1,000 in × $1 + 500 out × $2 = $0.002 → $0.004
+    $review = fn (bool $approved) => new StructuredTextResponse(
+        ['approved' => $approved, 'feedback' => 'ok'], '', new TextUsage(inputTokens: 1000, outputTokens: 500), new Meta(model: 'reviewer-model'),
+    );
+    Reviewer::fake([$review(false), $review(true)]);
+
+    $result = (new ReflectRetryLoop)->run(new TestAgent, 'Write a launch tweet');
+
+    // $0.0065 + $0.004
+    expect($result->cost)->toBe(0.0105);
+});
+
+it('has no cost when the reviewer model has no price', function () {
+    config()->set('agent-loops.pricing', ['test-model' => ['input' => 0.25, 'output' => 1.50]]);
+
+    TestAgent::fake([new TextResponse('Draft 1', new TextUsage(inputTokens: 1000, outputTokens: 2000), new Meta(model: 'test-model'))]);
+    Reviewer::fake([new StructuredTextResponse(
+        ['approved' => true, 'feedback' => 'ok'], '', new TextUsage(inputTokens: 1000, outputTokens: 500), new Meta(model: 'unknown-model'),
+    )]);
+
+    $result = (new ReflectRetryLoop)->run(new TestAgent, 'Write a launch tweet');
+
+    expect($result->cost)->toBeNull();
 });

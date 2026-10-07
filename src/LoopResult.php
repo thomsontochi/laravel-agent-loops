@@ -18,6 +18,7 @@ final readonly class LoopResult
      * @param  int  $inputTokens  Total tokens sent to the AI
      * @param  int  $outputTokens  Total tokens the AI returned
      * @param  float  $durationMs  How long the run took, in milliseconds
+     * @param  float|null  $cost  Estimated cost in dollars, or null if any AI call had no price (see config pricing)
      */
     public function __construct(
         public string $loop,
@@ -26,6 +27,7 @@ final readonly class LoopResult
         public int $inputTokens,
         public int $outputTokens,
         public float $durationMs,
+        public ?float $cost = null,
     ) {}
 
     /**

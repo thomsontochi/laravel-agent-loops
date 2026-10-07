@@ -2,6 +2,19 @@
 
 All notable changes to this package are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## v0.3.0 - 2026-10-07
+
+### Added
+
+- Estimated cost per run. `agent-loops:compare` shows a **Cost (est.)** column and `LoopResult` has a `cost` (dollars, or `null` when a model has no price). Each AI call is priced at the model that answered it, read from the response, so mixed models in one run are priced correctly.
+- `pricing` in `config/agent-loops.php`: dollars per 1M tokens for current Gemini, OpenAI and Anthropic models, checked 7 Oct 2026 against the official pricing pages. App entries are merged on top of the built-in list, model by model.
+- `Developia\AgentLoops\Pricing` with `estimate()` and `add()`.
+
+### Notes
+
+- Cost is an estimate: cached-token discounts, batch pricing, free tiers and long-prompt rates are not counted. The judge's call is not included.
+- `LoopResult`'s new `cost` argument is optional, so custom loops keep working unchanged.
+
 ## v0.2.1 - 2026-10-07
 
 ### Added

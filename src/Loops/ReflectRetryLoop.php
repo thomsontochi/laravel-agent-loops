@@ -7,6 +7,7 @@ namespace Developia\AgentLoops\Loops;
 use Developia\AgentLoops\Contracts\Loop;
 use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
+use Developia\AgentLoops\Pricing;
 use Developia\AgentLoops\Reflection\Reviewer;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Agent;
@@ -28,6 +29,9 @@ final class ReflectRetryLoop implements Loop
 
     private int $outputTokens = 0;
 
+    /** Running cost in dollars; null once any call has no price. */
+    private ?float $cost = 0.0;
+
     public function name(): string
     {
         return 'reflect-retry';
@@ -37,6 +41,7 @@ final class ReflectRetryLoop implements Loop
     {
         $this->inputTokens = 0;
         $this->outputTokens = 0;
+        $this->cost = 0.0;
         $startedAt = hrtime(true);
 
         $maxRetries = max(0, (int) config('agent-loops.reflect_retry.max_retries', 2));
@@ -133,6 +138,7 @@ final class ReflectRetryLoop implements Loop
             inputTokens: $this->inputTokens,
             outputTokens: $this->outputTokens,
             durationMs: (hrtime(true) - $startedAt) / 1_000_000,
+            cost: $this->cost,
         );
     }
 
@@ -140,5 +146,12 @@ final class ReflectRetryLoop implements Loop
     {
         $this->inputTokens += $response->usage->inputTokens;
         $this->outputTokens += $response->usage->outputTokens;
+
+        // Price each call at the model that answered it (agent and reviewer may differ).
+        $this->cost = Pricing::add($this->cost, Pricing::estimate(
+            $response->meta->model,
+            $response->usage->inputTokens,
+            $response->usage->outputTokens,
+        ));
     }
 }
