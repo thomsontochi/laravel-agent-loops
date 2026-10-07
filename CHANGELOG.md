@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented here. This project follows [Semantic Versioning](https://semver.org).
 
+## v0.2.1 - 2026-10-07
+
+### Added
+
+- `agent-loops:list` shows every registered loop, what it does, and which one is the default. Custom loops from `config/agent-loops.php` are listed too.
+
 ## v0.2.0 - 2026-10-07
 
 Everything in this release came out of running the package on real tasks and reading what each loop actually said.

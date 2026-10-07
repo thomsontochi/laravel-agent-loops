@@ -92,6 +92,14 @@ $result->steps;         // what happened, in order
 
 ## Pick a loop, three ways
 
+See every loop you have, what each one does, and which is the default:
+
+```bash
+php artisan agent-loops:list
+```
+
+Loops you register yourself in `config/agent-loops.php` show up there too.
+
 The most specific choice wins.
 
 **1. At the call site** (highest priority):
