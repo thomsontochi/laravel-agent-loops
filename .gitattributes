@@ -9,4 +9,5 @@
 /.gitignore         export-ignore
 /CONTRIBUTING.md    export-ignore
 /demo.tape          export-ignore
+/examples           export-ignore
 /phpunit.xml        export-ignore

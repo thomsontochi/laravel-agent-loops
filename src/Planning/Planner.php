@@ -32,6 +32,8 @@ final class Planner implements Agent, HasStructuredOutput
 
         You are planning, not answering. Break the task into clear, ordered steps.
         Use at most {$this->maxSteps} steps. Each step is one short instruction.
+        Plan only from the information given. If the task lacks facts a step
+        would need, plan to state what is unknown instead of inventing.
         TEXT);
     }
 

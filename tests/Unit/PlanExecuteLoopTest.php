@@ -2,6 +2,7 @@
 
 use Developia\AgentLoops\Events\PlanningFailed;
 use Developia\AgentLoops\Exceptions\PlanningFailedException;
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\Loops\PlanExecuteLoop;
 use Developia\AgentLoops\Planning\Planner;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
@@ -80,4 +81,20 @@ it('does not treat a provider outage as a planning failure', function () {
     // No fallback to react, and no misleading "planning failed" alert.
     TestAgent::assertNeverPrompted();
     Event::assertNotDispatched(PlanningFailed::class);
+});
+
+it('grounds every step and the final answer in the given facts', function () {
+    Planner::fake([['steps' => ['Step A', 'Step B']]]);
+    TestAgent::fake(['result of A', 'result of B', 'final']);
+
+    (new PlanExecuteLoop)->run(new TestAgent, 'Do the thing');
+
+    // 2 steps + 1 final answer, and not one of them is missing the grounding rule
+    TestAgent::assertPromptedTimes(3);
+    TestAgent::assertNotPrompted(fn ($prompt): bool => ! str_contains($prompt->prompt, Grounding::TEXT));
+});
+
+it('tells the planner to plan only from the information given', function () {
+    expect((new Planner('Be helpful.'))->instructions())
+        ->toContain('Plan only from the information given');
 });

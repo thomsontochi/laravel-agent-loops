@@ -23,9 +23,19 @@ final class Judge implements Agent, HasStructuredOutput
     {
         return <<<'TEXT'
         You compare several answers to the same task.
-        Score each answer from 1 (poor) to 10 (excellent) on how well it
-        completes the task. Judge the answer only, not how long it is.
-        Give a short reason for each score.
+
+        You are given the rules the answers had to follow, the task, and the answers.
+
+        Score each answer from 1 (poor) to 10 (excellent):
+        - First check every rule. Breaking a rule matters more than tone or style.
+        - If an answer breaks any rule, score it 4 or lower.
+        - If an answer promises or states something the rules and task do not
+          support (an invented offer, date, feature, or process), that counts
+          as breaking a rule.
+        - Only then compare the rule-following answers on how well they do the task.
+        - Judge the content, not how long it is.
+
+        For each answer give a short reason. If a rule was broken, name it.
         TEXT;
     }
 

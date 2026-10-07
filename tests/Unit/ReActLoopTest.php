@@ -1,5 +1,6 @@
 <?php
 
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\Loops\ReActLoop;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
 use Laravel\Ai\Responses\Data\Meta;
@@ -19,7 +20,15 @@ it('returns the agent answer as the output', function () {
         ->and($result->output)->toBe('Paris')
         ->and($result->steps)->toBe([['type' => 'answer', 'content' => 'Paris']]);
 
-    TestAgent::assertPrompted('What is the capital of France?');
+    TestAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->prompt, 'What is the capital of France?'));
+});
+
+it('tells the agent to answer from facts or say it does not know', function () {
+    TestAgent::fake(['ok']);
+
+    (new ReActLoop)->run(new TestAgent, 'Some task');
+
+    TestAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->prompt, Grounding::TEXT));
 });
 
 it('records token usage from the agent', function () {

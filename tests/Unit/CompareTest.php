@@ -6,6 +6,7 @@ use Developia\AgentLoops\Facades\AgentLoops;
 use Developia\AgentLoops\Reflection\Reviewer;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
 use Illuminate\Support\Facades\Artisan;
+use Laravel\Ai\Prompts\AgentPrompt;
 
 it('runs the task through every loop given', function () {
     TestAgent::fake(['react answer', 'reflect answer']);
@@ -76,4 +77,35 @@ it('prints the report as json when --json is given', function () {
         ->and($report['results']['react']['output'])->toBe('Launch day!')
         ->and($report['summary']['cheapest'])->toBe('react')
         ->and($report['summary']['best'])->toBeNull();
+});
+
+it('prints answers in full with --full', function () {
+    // An answer longer than the 100-character preview, with a unique ending
+    $long = str_repeat('Store credit is available. ', 6).'THE-END-OF-THE-REPLY';
+
+    GeneralAssistant::fake([$long, $long]);
+
+    // Default: preview only, so the ending is cut off
+    $this->artisan('agent-loops:compare', ['task' => 'Help', '--loops' => 'react'])
+        ->doesntExpectOutputToContain('THE-END-OF-THE-REPLY')
+        ->assertSuccessful();
+
+    // --full: the whole reply is printed
+    $this->artisan('agent-loops:compare', ['task' => 'Help', '--loops' => 'react', '--full' => true])
+        ->expectsOutputToContain('THE-END-OF-THE-REPLY')
+        ->assertSuccessful();
+});
+
+it('gives the judge the agent rules so it can check them', function () {
+    TestAgent::fake(['react answer']);
+    Judge::fake([['scores' => [
+        ['loop' => 'react', 'score' => 8, 'reason' => 'Follows the rules.'],
+    ]]]);
+
+    AgentLoops::compare(new TestAgent, 'Write a tweet', ['react'], judge: true);
+
+    // The judge's prompt must contain the agent's own instructions
+    Judge::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('You are a helpful test agent.')
+        && $prompt->contains('Write a tweet')
+        && $prompt->contains('react answer'));
 });

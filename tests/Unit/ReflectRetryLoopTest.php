@@ -1,5 +1,6 @@
 <?php
 
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\Loops\ReflectRetryLoop;
 use Developia\AgentLoops\Reflection\Reviewer;
 use Developia\AgentLoops\Tests\Fixtures\TestAgent;
@@ -55,4 +56,23 @@ it('returns the last attempt flagged when retries run out', function () {
 
     // 1 retry = 2 attempts in total
     TestAgent::assertPromptedTimes(2);
+});
+
+it('grounds the first attempt and every retry in the given facts', function () {
+    TestAgent::fake(['Draft with an invented portal', 'Fixed draft']);
+    Reviewer::fake([
+        ['approved' => false, 'feedback' => 'There is no portal.'],
+        ['approved' => true, 'feedback' => 'Good.'],
+    ]);
+
+    (new ReflectRetryLoop)->run(new TestAgent, 'Help the customer');
+
+    // first attempt + 1 retry, and both carry the grounding rule
+    TestAgent::assertPromptedTimes(2);
+    TestAgent::assertNotPrompted(fn ($prompt): bool => ! str_contains($prompt->prompt, Grounding::TEXT));
+});
+
+it('tells the reviewer to reject invented facts', function () {
+    expect((new Reviewer('Be helpful.'))->instructions())
+        ->toContain('Reject if the answer breaks any of these instructions');
 });

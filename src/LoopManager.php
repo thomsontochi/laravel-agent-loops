@@ -112,7 +112,7 @@ final class LoopManager
 
         if ($judge && $results !== []) {
             try {
-                $scores = $this->judge($task, $results);
+                $scores = $this->judge($agent, $task, $results);
             } catch (Exception $e) {
                 Log::warning('[agent-loops] compare: judge failed', ['error' => $e->getMessage()]);
 
@@ -126,16 +126,24 @@ final class LoopManager
     /**
      * Ask the Judge to score each answer.
      *
+     * The judge gets the agent's own instructions as the rules to check,
+     * so it can punish answers that break them, not just reward answers
+     * that sound nice.
+     *
      * @param  array<string, LoopResult>  $results
      * @return array<string, array{score: int, reason: string}>
      */
-    private function judge(string $task, array $results): array
+    private function judge(Agent $agent, string $task, array $results): array
     {
+        $rules = trim((string) $agent->instructions());
+
         $answers = collect($results)
             ->map(fn (LoopResult $result, string $name): string => "[{$name}]\n{$result->output}")
             ->implode("\n\n");
 
-        $response = (new Judge)->prompt("Task: {$task}\n\nAnswers:\n\n{$answers}");
+        $response = (new Judge)->prompt(
+            "Rules the answers must follow:\n{$rules}\n\nTask: {$task}\n\nAnswers:\n\n{$answers}"
+        );
 
         $scores = [];
 

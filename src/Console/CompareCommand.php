@@ -23,7 +23,8 @@ final class CompareCommand extends Command
         {--loops=react,plan-execute,reflect-retry : Comma-separated loop names}
         {--agent= : Agent class to use (default: a built-in assistant)}
         {--judge : Also score each answer 1-10 with a Judge agent}
-        {--json : Output the report as JSON instead of tables}';
+        {--json : Output the report as JSON instead of tables}
+        {--full : Print every answer in full instead of a short preview}';
 
     protected $description = 'Run one task through several loops and compare cost, speed and output';
 
@@ -107,8 +108,19 @@ final class CompareCommand extends Command
             );
         }
 
-        // 3. The answers themselves, so a human can judge
+        // 3. The answers themselves, so a human can judge.
+        //    Short preview by default; --full prints every word.
+        $full = (bool) $this->option('full');
+
         foreach ($report->results as $name => $result) {
+            if ($full) {
+                $this->newLine();
+                $this->line("<options=bold>=== {$name} ===</>");
+                $this->line($result->output);
+
+                continue;
+            }
+
             $this->line("<options=bold>{$name}</>  ".Str::limit(Str::squish($result->output), 100));
         }
 

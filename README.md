@@ -124,6 +124,8 @@ AGENT_LOOPS_DEFAULT=react
 
 ## The loops
 
+Every loop adds one grounding line to the prompts it sends: *answer only from the facts in the task and your instructions, and if a fact is missing, say so instead of inventing it.* It lowers made-up links, dates and offers. It doesn't make them impossible, so the clearer your agent's own rules, the better.
+
 | Loop | How it thinks | AI calls | Best for |
 |---|---|---|---|
 | `react` | Think, use a tool, look, repeat. Laravel AI's native tool loop. | 1 prompt | Quick questions and simple tool use |
@@ -179,7 +181,10 @@ Start with `react`. It's the cheapest and fastest, and it's enough for most ques
 | Is a quick question or a single tool call | `react` | 1 prompt, lowest cost and latency |
 | Has several parts that depend on each other (research, then summarise, then format) | `plan-execute` | Each step sees the earlier results |
 | Must come out in an exact form (one tweet, valid code, a set word count) | `reflect-retry` | A reviewer rejects answers that miss the brief |
+| Must follow rules where a mistake costs money (refund policy, pricing, legal) | `reflect-retry` | It's the only loop that re-reads your rules before answering |
 | You're not sure | `agent-loops:compare` | Measure it on your real task instead of guessing |
+
+**What our own tests found** ([real outputs in `examples/`](examples)): with vague rules, `react` and `plan-execute` both sent a customer to a returns portal the store doesn't have, and only `reflect-retry` caught it. Once the agent's rules said plainly "never say anything outside these instructions", all three loops answered correctly, so the cheapest one, `react`, was the right pick. Fix your instructions first, then use `compare` to check which loop is enough.
 
 A real example from the run above: for a single tweet, `plan-execute` cost about 10x more than `react`, because a tweet isn't really a multi-step task. `reflect-retry` was the one that caught the "list of options instead of one tweet" problem.
 
@@ -195,8 +200,11 @@ php artisan agent-loops:compare "Summarise this support ticket" --loops=react,re
 |---|---|
 | `--loops=` | Comma-separated loop names. Default: all three |
 | `--agent=` | Your agent class, e.g. `"App\Ai\Agents\SupportAgent"`. Default: a built-in assistant |
-| `--judge` | Also scores each answer 1 to 10 with a judge agent. One extra AI call. AI judges can be biased, so treat it as a second opinion |
+| `--judge` | Also scores each answer 1 to 10 with a judge agent. The judge gets your agent's instructions as the rules to check. One extra AI call |
+| `--full` | Prints every answer in full instead of a short preview |
 | `--json` | Prints the report as JSON, for scripts, CI and saving results |
+
+> **Read the answers, not just the scores.** In a real run, our support agent's rules said *"We never offer free or prepaid labels."* One loop promised a prepaid return label anyway, and the judge, with those rules in front of it, still scored it 10/10. In another run it gave 3/10 to an answer that broke no rule. AI judges skim. Treat the score as a second opinion and use `--full` to read what each loop actually said before you pick one. The judge can also over-reward answers that recite the rules, even when the user only asked a simple question.
 
 Or from code:
 

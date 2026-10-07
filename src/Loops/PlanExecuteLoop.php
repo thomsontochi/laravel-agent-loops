@@ -7,6 +7,7 @@ namespace Developia\AgentLoops\Loops;
 use Developia\AgentLoops\Contracts\Loop;
 use Developia\AgentLoops\Events\PlanningFailed;
 use Developia\AgentLoops\Exceptions\PlanningFailedException;
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Planning\Planner;
 use Illuminate\Support\Facades\Log;
@@ -174,7 +175,7 @@ final class PlanExecuteLoop implements Loop
         {$resultsText}
 
         Now do step {$number} only: {$step}
-        TEXT;
+        TEXT."\n\n".Grounding::TEXT;
     }
 
     /**
@@ -191,7 +192,7 @@ final class PlanExecuteLoop implements Loop
         {$resultsText}
 
         Using these results, give the final answer to the task.
-        TEXT;
+        TEXT."\n\n".Grounding::TEXT;
     }
 
     private function addUsage(AgentResponse $response): void

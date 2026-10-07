@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Developia\AgentLoops\Loops;
 
 use Developia\AgentLoops\Contracts\Loop;
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
 use Developia\AgentLoops\Reflection\Reviewer;
 use Illuminate\Support\Facades\Log;
@@ -44,7 +45,7 @@ final class ReflectRetryLoop implements Loop
         Log::debug('[agent-loops] reflect-retry: start', ['agent' => $agent::class, 'max_retries' => $maxRetries]);
 
         // 1. First attempt
-        $answer = $this->ask($agent, $task);
+        $answer = $this->ask($agent, $task."\n\n".Grounding::TEXT);
         $steps = [['type' => 'attempt', 'content' => $answer]];
 
         for ($retry = 0; $retry <= $maxRetries; $retry++) {
@@ -117,7 +118,7 @@ final class ReflectRetryLoop implements Loop
         {$feedback}
 
         Write an improved answer that fixes these problems.
-        TEXT;
+        TEXT."\n\n".Grounding::TEXT;
     }
 
     /**

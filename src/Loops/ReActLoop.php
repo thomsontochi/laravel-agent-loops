@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Developia\AgentLoops\Loops;
 
 use Developia\AgentLoops\Contracts\Loop;
+use Developia\AgentLoops\Grounding;
 use Developia\AgentLoops\LoopResult;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Agent;
@@ -30,7 +31,7 @@ final class ReActLoop implements Loop
 
         $startedAt = hrtime(true);
 
-        $response = $agent->prompt($task);
+        $response = $agent->prompt($task."\n\n".Grounding::TEXT);
 
         $durationMs = (hrtime(true) - $startedAt) / 1_000_000;
 

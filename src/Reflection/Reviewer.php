@@ -36,6 +36,8 @@ final class Reviewer implements Agent, HasStructuredOutput
         one thing (one tweet, one summary, one function), several options or
         a list to choose from do not count. Reject answers that are incomplete,
         incorrect, or padded with commentary the task did not ask for.
+        Reject if the answer breaks any of these instructions or states something
+        they do not support (an invented offer, date, link, feature, or process).
         If you reject, give short, specific feedback the agent can act on.
         TEXT);
     }
